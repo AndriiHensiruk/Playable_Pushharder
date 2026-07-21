@@ -3,12 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Playable_Pushharder</title>
+  <title>Playable_Car_Ride</title>
   <style>
     :root {
-      --app-height: 100vh;
-      --color-gold: #ffd700;
-      --color-glow: rgba(255, 215, 0, 0.6);
       --ease-out-back: cubic-bezier(0.175, 0.885, 0.32, 1.275);
       --ease-in-out-cinematic: cubic-bezier(0.77, 0, 0.175, 1);
     }
@@ -28,7 +25,7 @@
       height: 100%;
       background-color: #000;
       overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
@@ -49,17 +46,37 @@
       contain: strict;
     }
 
-    /* CAMERA RIG (Управління всією сценою) */
-    #camera-rig {
+    /* ЗОВНІШНІЙ КОНТЕЙНЕР (Захист від голих країв) */
+    #car-rig-scaler {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transform: scale(1.15);
+      transform-origin: center center;
+    }
+
+    /* ВНУТРІШНІЙ КОНТЕЙНЕР ПІДВІСКИ ТА АНІМАЦІЇ */
+    #car-rig {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
       transform-style: preserve-3d;
-      will-change: transform, filter;
-      transform: translate3d(0, 0, 0) scale(1);
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
     }
 
-    /* ШАРИ СЦЕНИ (CROSS FADE) */
+    /* ІМІТАЦІЯ ВІБРАЦІЇ МОТОРА */
+    .car-driving-idle {
+      animation: carEngineVibration 0.12s infinite alternate linear;
+    }
+
+    @keyframes carEngineVibration {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      50% { transform: translate3d(0.5px, -1.2px, 0) rotate(0.1deg); }
+      100% { transform: translate3d(-0.5px, 0.8px, 0) rotate(-0.1deg); }
+    }
+
+    /* ШАРИ СЦЕНИ З ЕФЕКТОМ KEN BURNS */
     .scene-layer {
       position: absolute;
       top: 0; left: 0;
@@ -67,8 +84,11 @@
       object-fit: cover;
       opacity: 0;
       will-change: opacity, transform;
-      transition: opacity 0.6s var(--ease-in-out-cinematic);
+      transition: opacity 0.5s var(--ease-in-out-cinematic);
       z-index: 1;
+      
+      animation: kenBurnsLoop 20s ease-in-out infinite alternate;
+      transform-origin: center center;
     }
 
     .scene-layer.active {
@@ -76,18 +96,19 @@
       z-index: 2;
     }
 
-    /* IDLE СЦЕНИ */
-    .idle-breath {
-      animation: cameraIdle 8s infinite alternate ease-in-out;
+    @keyframes kenBurnsLoop {
+      0% {
+        transform: scale(1) translate3d(0, 0, 0);
+      }
+      50% {
+        transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+      }
+      100% {
+        transform: scale(1.06) translate3d(1.5%, 1%, 0);
+      }
     }
 
-    @keyframes cameraIdle {
-      0% { transform: scale(1) translate3d(0, 0, 0) rotate(0deg); }
-      50% { transform: scale(1.03) translate3d(-1%, -0.5%, 0) rotate(-0.3deg); }
-      100% { transform: scale(1.05) translate3d(0.5%, 0.8%, 0) rotate(0.3deg); }
-    }
-
-    /* VFX & OVERLAYS */
+    /* CANVAS ДЛЯ ПАРТІКЛІВ */
     #fx-canvas {
       position: absolute;
       top: 0; left: 0;
@@ -96,45 +117,16 @@
       pointer-events: none;
     }
 
-    /* LIGHT LEAK EFFECT */
-    .light-leak {
-      position: absolute;
-      top: -50%; left: -50%;
-      width: 200%; height: 200%;
-      background: radial-gradient(circle at 30% 30%, rgba(255, 180, 100, 0.25) 0%, rgba(255, 100, 50, 0.08) 35%, transparent 70%);
-      mix-blend-mode: screen;
-      z-index: 4;
-      pointer-events: none;
-      animation: lightLeakMove 12s ease-in-out infinite alternate;
-    }
-
-    @keyframes lightLeakMove {
-      0% { transform: translate3d(-10%, -10%, 0) rotate(0deg); opacity: 0.6; }
-      100% { transform: translate3d(5%, 5%, 0) rotate(15deg); opacity: 0.9; }
-    }
-
-    /* ВІНЬЄТКА */
     .vignette {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+      background: radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.8) 100%);
       z-index: 5;
       pointer-events: none;
     }
 
-    /* NOISE OVERLAY */
-    .noise-layer {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.05"/></svg>');
-      mix-blend-mode: overlay;
-      z-index: 6;
-      pointer-events: none;
-    }
-
-    /* UI & TEXTS */
+    /* UI & BUTTONS */
     .ui-container {
       position: absolute;
       top: 0; left: 0;
@@ -155,7 +147,7 @@
       opacity: 0;
       transform: translate3d(0, -30px, 0) scale(0.9);
       transition: opacity 0.5s ease, transform 0.5s var(--ease-out-back);
-      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
     }
 
     .top-title.visible {
@@ -164,10 +156,9 @@
     }
 
     .top-title.final-position {
-      margin-top: 65%;
+      margin-top: 55%;
     }
 
-    /* КНОПКИ ДІЇ (INTERACTIVE) */
     .action-btn {
       position: absolute;
       bottom: 22%;
@@ -178,7 +169,7 @@
       opacity: 0;
       transform: translate3d(0, 40px, 0) scale(0.8);
       transition: opacity 0.4s ease, transform 0.4s var(--ease-out-back);
-      will-change: transform, filter;
+      will-change: transform;
     }
 
     .action-btn.visible {
@@ -186,32 +177,20 @@
       transform: translate3d(0, 0, 0) scale(1);
     }
 
-    /* ТАКТИЛЬНІ АНІМАЦІЇ КНОПОК */
     .action-btn:active {
       transform: scale(0.9) !important;
-      filter: brightness(1.2);
-    }
-
-    .btn-anticipate {
-      animation: btnAnticipate 0.25s ease-in forwards !important;
-    }
-
-    @keyframes btnAnticipate {
-      0% { transform: scale(1); }
-      40% { transform: scale(0.82) rotate(-2deg); }
-      100% { transform: scale(1.1) rotate(1deg); }
     }
 
     .btn-pulse {
-      animation: btnPulse 2s infinite ease-in-out;
+      animation: btnPulse 1.8s infinite ease-in-out;
     }
 
     @keyframes btnPulse {
-      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-      50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(255,215,0,0.4)); }
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); filter: drop-shadow(0 0 15px rgba(255,215,0,0.5)); }
     }
 
-    /* GLOW CTA CONTAINER & SHINE */
+    /* CTA КОНТЕЙНЕРИ ТА 4s ЦИКЛ (Idle -> Glow -> Bounce -> Idle -> Shine -> Idle) */
     .cta-wrapper {
       position: absolute;
       bottom: 18%;
@@ -222,67 +201,132 @@
       transform: translate3d(0, 30px, 0) scale(0.9);
       transition: opacity 0.6s ease, transform 0.6s var(--ease-out-back);
       display: none;
+      overflow: hidden;
+      border-radius: 50px;
     }
 
     .cta-wrapper.visible {
       display: block;
       opacity: 1;
       transform: translate3d(0, 0, 0) scale(1);
+      animation: ctaMasterSequence 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .cta-wrapper:active {
+      transform: scale(0.92) !important;
     }
 
     .btn-cta {
       width: 100%;
       height: auto;
       display: block;
-      position: relative;
       border-radius: 50px;
-      filter: drop-shadow(0 0 15px var(--color-glow));
-      animation: ctaGlowPulse 1.8s infinite alternate ease-in-out;
+      will-change: transform, filter;
+      cursor: pointer;
     }
 
-    @keyframes ctaGlowPulse {
-      0% { filter: drop-shadow(0 0 10px rgba(255,215,0,0.4)) brightness(1); transform: scale(1); }
-      100% { filter: drop-shadow(0 0 30px rgba(255,215,0,0.9)) brightness(1.15); transform: scale(1.04); }
-    }
-
-    .shine-sweep {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      border-radius: 40px;
-      overflow: hidden;
-      pointer-events: none;
-    }
-
-    .shine-sweep::after {
+    /* ЕФЕКТ SHINE (Світлова смуга) */
+    .cta-wrapper::after {
       content: '';
       position: absolute;
-      top: -50%; left: -150%;
-      width: 60%; height: 200%;
+      top: -50%;
+      left: -120%;
+      width: 60%;
+      height: 200%;
       background: linear-gradient(
-        60deg,
-        transparent 20%,
-        rgba(255, 255, 255, 0.75) 50%,
-        transparent 80%
+        60deg, 
+        rgba(255, 255, 255, 0) 0%, 
+        rgba(255, 255, 255, 0.2) 20%, 
+        rgba(255, 255, 255, 0.85) 50%, 
+        rgba(255, 255, 255, 0.2) 80%, 
+        rgba(255, 255, 255, 0) 100%
       );
       transform: rotate(25deg);
-      animation: shineEffect 2.8s infinite ease-in-out;
+      pointer-events: none;
+      opacity: 0;
     }
 
-    @keyframes shineEffect {
-      0% { left: -150%; }
-      35%, 100% { left: 150%; }
+    .cta-wrapper.visible::after {
+      animation: ctaShineSequence 4s infinite linear;
     }
 
-    /* FLASH EFFECT */
+    @keyframes ctaMasterSequence {
+      0% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+      }
+      /* --- GLOW --- */
+      15% {
+        transform: scale(1.04);
+        filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.9));
+      }
+      25% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.4));
+      }
+      /* --- BOUNCE --- */
+      33% {
+        transform: scale(1.08, 0.94) translate3d(0, -6px, 0);
+        filter: drop-shadow(0 12px 20px rgba(255, 215, 0, 0.7));
+      }
+      40% {
+        transform: scale(0.96, 1.04) translate3d(0, 2px, 0);
+      }
+      46% {
+        transform: scale(1.02, 0.98) translate3d(0, -2px, 0);
+      }
+      52% {
+        transform: scale(1) translate3d(0, 0, 0);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+      }
+      /* --- IDLE --- */
+      62% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+      }
+      /* --- SHINE ACCENT --- */
+      72% {
+        transform: scale(1.02);
+        filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.6));
+      }
+      82% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+      }
+      /* --- IDLE --- */
+      100% {
+        transform: scale(1);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+      }
+    }
+
+    @keyframes ctaShineSequence {
+      0%, 63% {
+        left: -120%;
+        opacity: 0;
+      }
+      65% {
+        opacity: 1;
+      }
+      80% {
+        left: 140%;
+        opacity: 1;
+      }
+      82%, 100% {
+        left: 140%;
+        opacity: 0;
+      }
+    }
+
+    /* FLASH EFFECT (dark impact) */
     #flash-overlay {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background-color: #fff;
+      background-color: #000;
       z-index: 20;
       opacity: 0;
       pointer-events: none;
-      will-change: opacity;
     }
 
     /* MUTE BUTTON */
@@ -291,10 +335,9 @@
       top: 18px; right: 18px;
       width: 42px; height: 42px;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.3);
       backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
       z-index: 30;
       cursor: pointer;
       display: flex;
@@ -303,53 +346,41 @@
       pointer-events: auto;
     }
 
-    #sound-control svg {
-      width: 20px; height: 20px;
-      fill: #ffffff;
-    }
+    #sound-control svg { width: 20px; height: 20px; fill: #fff; }
   </style>
-
-  <!-- SVG Фільтри для Zoom Blur -->
-  <svg style="display:none;">
-    <defs>
-      <filter id="zoom-blur-filter">
-        <feGaussianBlur id="blur-element" stdDeviation="0,0"></feGaussianBlur>
-      </filter>
-    </defs>
-  </svg>
 </head>
 <body>
 
   <div id="game-viewport">
     
-    <!-- Camera Rig задіяний для загального зсуву/дрожання всієї локації -->
-    <div id="camera-rig" class="idle-breath">
-      <img id="bg-layer-a" class="scene-layer active" src="assets/bg1.webp" alt="Background A">
-      <img id="bg-layer-b" class="scene-layer" src="" alt="Background B">
-    </div>
-
-    <!-- Графічні шари FX -->
-    <canvas id="fx-canvas"></canvas>
-    <div class="light-leak"></div>
-    <div class="vignette"></div>
-    <div class="noise-layer"></div>
-    <div id="flash-overlay"></div>
-
-    <!-- UI Шар -->
-    <div class="ui-container">
-      <img id="top-title" class="top-title visible" src="assets/text_start.webp" alt="Title">
-
-      <img id="btn-step-1" class="action-btn btn-pulse visible" src="assets/btn1.webp" alt="Action 1">
-      <img id="btn-step-2" class="action-btn btn-pulse" src="assets/btn2.webp" alt="Action 2" style="display:none;">
-      <img id="btn-step-3" class="action-btn btn-pulse" src="assets/btn2.webp" alt="Action 3" style="display:none;">
-
-      <div id="cta-wrapper" class="cta-wrapper">
-        <img id="btn-cta" class="btn-cta" src="assets/btn_cta.webp" alt="Play Now">
-        <div class="shine-sweep"></div>
+    <div id="car-rig-scaler">
+      <div id="car-rig" class="car-driving-idle">
+        <img id="bg-layer-a" class="scene-layer active" src="assets/bg1.webp" alt="Car Scene A">
+        <img id="bg-layer-b" class="scene-layer" src="" alt="Car Scene B">
       </div>
     </div>
 
-    <!-- Звуковий перемикач -->
+    <!-- Canvas для частинок (партліків) -->
+    <canvas id="fx-canvas"></canvas>
+    <div class="vignette"></div>
+    <div id="flash-overlay"></div>
+
+    <div class="ui-container">
+      <img id="top-title" class="top-title visible" src="assets/text_start.webp" alt="Title">
+
+      <!-- ПЕРША КНОПКА ТЕПЕР ОГОРНУТА У CTA-WRAPPER -->
+      <div id="wrapper-step-1" class="cta-wrapper visible">
+        <img id="btn-step-1" class="btn-cta" src="assets/btn1.webp" alt="Push Harder">
+      </div>
+
+      <img id="btn-step-2" class="action-btn btn-pulse" src="assets/btn2.webp" alt="Push Harder" style="display:none;">
+      <img id="btn-step-3" class="action-btn btn-pulse" src="assets/btn2.webp" alt="Push Harder" style="display:none;">
+
+      <div id="cta-wrapper" class="cta-wrapper">
+        <img id="btn-cta" class="btn-cta" src="assets/btn_cta.webp" alt="Play Now">
+      </div>
+    </div>
+
     <div id="sound-control">
       <svg id="icon-sound-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
       <svg id="icon-sound-off" viewBox="0 0 24 24" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
@@ -357,33 +388,76 @@
   </div>
 
   <script>
-    /**
-     * MRAID & CORE INITIALIZATION
-     */
+    // MRAID Helper
     const MRAID = {
       isAvailable: () => typeof mraid !== 'undefined',
       openStore: (url) => {
-        if (typeof mraid !== 'undefined' && mraid.open) {
+        if (typeof mraid !== 'undefined' && typeof mraid.open === 'function') {
           mraid.open(url);
         } else {
-          window.open(url, '_blank');
+          window.location.href = url;
         }
       }
     };
 
-    /**
-     * AUDIO MANAGER (Web Audio API + Fade System)
-     */
-    class AudioManager {
-      constructor() {
-        this.ctx = null;
-        this.isMuted = false;
-        this.sounds = {};
-        this.bgMusic = null;
-        this.init();
+    // СИСТЕМА ПАРТІКЛІВ
+    class ParticleSystem {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.animate();
       }
 
-      init() {
+      resize() {
+        this.canvas.width = this.canvas.clientWidth;
+        this.canvas.height = this.canvas.clientHeight;
+      }
+
+      spawnParticles(count = 20) {
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            size: Math.random() * 3 + 1,
+            speedX: (Math.random() - 0.5) * 2,
+            speedY: Math.random() * 3 + 1,
+            alpha: Math.random() * 0.7 + 0.3,
+            color: Math.random() > 0.3 ? 'rgba(255, 215, 0,' : 'rgba(255, 255, 255,'
+          });
+        }
+      }
+
+      animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          let p = this.particles[i];
+          p.x += p.speedX;
+          p.y += p.speedY;
+          p.alpha -= 0.01;
+
+          if (p.alpha <= 0) {
+            this.particles.splice(i, 1);
+            continue;
+          }
+
+          this.ctx.fillStyle = p.color + p.alpha + ')';
+          this.ctx.beginPath();
+          this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+
+        requestAnimationFrame(() => this.animate());
+      }
+    }
+
+    // АУДІО МЕНЕДЖЕР
+    class AudioManager {
+      constructor() {
+        this.isMuted = false;
         this.bgMusic = new Audio('assets/bg_music.mp3');
         this.bgMusic.loop = true;
         this.bgMusic.volume = 0;
@@ -395,14 +469,12 @@
         };
       }
 
-      playMusicWithFade(targetVolume = 0.4, duration = 1500) {
+      playMusicWithFade(targetVolume = 0.4, duration = 1000) {
         if (this.isMuted) return;
         this.bgMusic.play().catch(() => {});
         let start = performance.now();
-        
         const fade = (now) => {
-          let elapsed = now - start;
-          let progress = Math.min(elapsed / duration, 1);
+          let progress = Math.min((now - start) / duration, 1);
           this.bgMusic.volume = progress * targetVolume;
           if (progress < 1) requestAnimationFrame(fade);
         };
@@ -412,7 +484,7 @@
       playSFX(key) {
         if (this.isMuted || !this.sfx[key]) return;
         const sound = this.sfx[key].cloneNode();
-        sound.volume = 0.8;
+        sound.volume = 0.85;
         sound.play().catch(() => {});
       }
 
@@ -424,122 +496,63 @@
       }
     }
 
-    /**
-     * CAMERA CONTROLLER (Управління трясінням, кинематографічним рухом)
-     */
-    class CameraController {
-      constructor(rigElement) {
-        this.rig = rigElement;
-        this.blurFilter = document.getElementById('blur-element');
+    // КОНТРОЛЕР ПІДВІСКИ ТА СТРИБКА
+    class CarSuspensionController {
+      constructor(carRig, particleSystem) {
+        this.rig = carRig;
+        this.particleSystem = particleSystem;
       }
 
-      shake(type = 'medium') {
-        const configs = {
-          light: { count: 8, intensity: 4, duration: 250 },
-          medium: { count: 12, intensity: 10, duration: 400 },
-          heavy: { count: 18, intensity: 22, duration: 550 }
+      triggerBumpImpact(power = 'medium') {
+        const settings = {
+          light: { compress: 12, bounceUp: -25, duration: 400, scaleX: 1.03, scaleY: 0.96 },
+          medium: { compress: 20, bounceUp: -35, duration: 500, scaleX: 1.05, scaleY: 0.94 },
+          heavy: { compress: 28, bounceUp: -48, duration: 600, scaleX: 1.07, scaleY: 0.92 }
         };
 
-        const cfg = configs[type] || configs.medium;
+        const cfg = settings[power] || settings.medium;
+        this.rig.classList.remove('car-driving-idle');
+
+        this.particleSystem.spawnParticles(35);
+
         let startTime = performance.now();
 
-        const doShake = (now) => {
+        const animateBump = (now) => {
           let elapsed = now - startTime;
-          if (elapsed < cfg.duration) {
-            let damping = 1 - (elapsed / cfg.duration);
-            let rx = (Math.random() - 0.5) * cfg.intensity * damping;
-            let ry = (Math.random() - 0.5) * cfg.intensity * damping;
-            let rot = (Math.random() - 0.5) * (cfg.intensity / 2) * damping;
+          let progress = elapsed / cfg.duration;
 
-            this.rig.style.transform = `translate3d(${rx}px, ${ry}px, 0) rotate(${rot}deg) scale(1.05)`;
-            requestAnimationFrame(doShake);
-          } else {
-            this.rig.style.transform = `translate3d(0, 0, 0) scale(1)`;
+          if (progress < 0.25) {
+            let p = progress / 0.25;
+            let y = p * cfg.compress;
+            this.rig.style.transform = `translate3d(0, ${y}px, 0) scale(${1 + (cfg.scaleX - 1) * p}, ${1 - (1 - cfg.scaleY) * p})`;
+          } 
+          else if (progress < 0.6) {
+            let p = (progress - 0.25) / 0.35;
+            let y = cfg.compress + p * (cfg.bounceUp - cfg.compress);
+            let rot = (Math.random() - 0.5) * 3;
+            this.rig.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg) scale(${cfg.scaleY}, ${cfg.scaleX})`;
+          } 
+          else if (progress < 1) {
+            let p = (progress - 0.6) / 0.4;
+            let y = cfg.bounceUp * (1 - p);
+            this.rig.style.transform = `translate3d(0, 0, 0) scale(1, 1)`;
+            this.rig.classList.add('car-driving-idle');
+            return;
           }
-        };
-        requestAnimationFrame(doShake);
-      }
 
-      applyZoomBlur(intensity, duration = 300) {
-        let start = performance.now();
-        const step = (now) => {
-          let progress = (now - start) / duration;
-          if (progress < 1) {
-            let val = Math.sin(progress * Math.PI) * intensity;
-            this.blurFilter.setAttribute('stdDeviation', `0, ${val}`);
-            this.rig.style.filter = `url(#zoom-blur-filter)`;
-            requestAnimationFrame(step);
-          } else {
-            this.blurFilter.setAttribute('stdDeviation', `0, 0`);
-            this.rig.style.filter = `none`;
-          }
+          requestAnimationFrame(animateBump);
         };
-        requestAnimationFrame(step);
+
+        requestAnimationFrame(animateBump);
       }
     }
 
-    /**
-     * PARTICLE ENGINE (Частинки пилу/іскор з паралаксом)
-     */
-    class ParticleEngine {
-      constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.particles = [];
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        this.initParticles();
-        this.loop();
-      }
-
-      resize() {
-        this.canvas.width = this.canvas.parentElement.clientWidth;
-        this.canvas.height = this.canvas.parentElement.clientHeight;
-      }
-
-      initParticles() {
-        this.particles = Array.from({ length: 35 }, () => ({
-          x: Math.random() * this.canvas.width,
-          y: Math.random() * this.canvas.height,
-          size: Math.random() * 2 + 0.5,
-          speedY: -(Math.random() * 0.6 + 0.2),
-          speedX: (Math.random() - 0.5) * 0.3,
-          opacity: Math.random() * 0.6 + 0.2,
-          pulse: Math.random() * 0.02
-        }));
-      }
-
-      loop() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.particles.forEach(p => {
-          p.y += p.speedY;
-          p.x += p.speedX;
-          p.opacity += Math.sin(Date.now() * p.pulse) * 0.01;
-
-          if (p.y < -10) {
-            p.y = this.canvas.height + 10;
-            p.x = Math.random() * this.canvas.width;
-          }
-
-          this.ctx.fillStyle = `rgba(255, 235, 180, ${Math.max(0, p.opacity)})`;
-          this.ctx.beginPath();
-          this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          this.ctx.fill();
-        });
-
-        requestAnimationFrame(() => this.loop());
-      }
-    }
-
-    /**
-     * TRANSITION & SCENE MANAGER
-     */
+    // МЕНЕДЖЕР СЦЕНИ
     class SceneManager {
       constructor() {
         this.audio = new AudioManager();
-        this.camera = new CameraController(document.getElementById('camera-rig'));
-        this.particles = new ParticleEngine(document.getElementById('fx-canvas'));
+        this.particles = new ParticleSystem(document.getElementById('fx-canvas'));
+        this.carController = new CarSuspensionController(document.getElementById('car-rig'), this.particles);
 
         this.layerA = document.getElementById('bg-layer-a');
         this.layerB = document.getElementById('bg-layer-b');
@@ -548,6 +561,7 @@
         this.flash = document.getElementById('flash-overlay');
         this.title = document.getElementById('top-title');
 
+        this.wrapperStep1 = document.getElementById('wrapper-step-1');
         this.btn1 = document.getElementById('btn-step-1');
         this.btn2 = document.getElementById('btn-step-2');
         this.btn3 = document.getElementById('btn-step-3');
@@ -556,102 +570,100 @@
         this.bindEvents();
       }
 
-      triggerFlash(duration = 250) {
-        this.flash.style.opacity = '0.8';
+      triggerFlash(intensity = 0.35) {
+        this.flash.style.transition = 'opacity 80ms ease-out';
+        this.flash.style.opacity = String(intensity);
+
         setTimeout(() => {
-          this.flash.style.transition = `opacity ${duration}ms ease-out`;
+          this.flash.style.transition = 'opacity 300ms ease-out';
           this.flash.style.opacity = '0';
-        }, 50);
+        }, 90);
       }
 
       crossFadeTo(newSrc, onComplete) {
         const nextLayer = (this.activeLayer === this.layerA) ? this.layerB : this.layerA;
-        
-        nextLayer.src = newSrc;
-        nextLayer.classList.add('active');
-        this.activeLayer.classList.remove('active');
-        
-        this.activeLayer = nextLayer;
-        
-        if (onComplete) setTimeout(onComplete, 500);
+
+        const imgLoader = new Image();
+        imgLoader.src = newSrc;
+
+        imgLoader.onload = () => {
+          nextLayer.src = newSrc;
+          nextLayer.classList.add('active');
+          this.activeLayer.classList.remove('active');
+          this.activeLayer = nextLayer;
+          
+          if (onComplete) setTimeout(onComplete, 450);
+        };
+
+        if (imgLoader.complete) {
+          imgLoader.onload = null;
+          nextLayer.src = newSrc;
+          nextLayer.classList.add('active');
+          this.activeLayer.classList.remove('active');
+          this.activeLayer = nextLayer;
+          
+          if (onComplete) setTimeout(onComplete, 450);
+        }
       }
 
       bindEvents() {
         const soundBtn = document.getElementById('sound-control');
-        const iconOn = document.getElementById('icon-sound-on');
-        const iconOff = document.getElementById('icon-sound-off');
-
         soundBtn.addEventListener('click', () => {
           const isMuted = this.audio.toggleMute();
-          iconOn.style.display = isMuted ? 'none' : 'block';
-          iconOff.style.display = isMuted ? 'block' : 'none';
+          document.getElementById('icon-sound-on').style.display = isMuted ? 'none' : 'block';
+          document.getElementById('icon-sound-off').style.display = isMuted ? 'block' : 'none';
         });
 
-        this.btn1.addEventListener('click', () => {
-          this.btn1.classList.add('btn-anticipate');
-          
-          setTimeout(() => {
-            this.btn1.style.display = 'none';
-            this.title.classList.remove('visible');
-            
-            this.audio.playMusicWithFade();
-            this.triggerFlash();
-            this.camera.shake('light');
-            this.camera.applyZoomBlur(8);
+        // КРОК 1
+        this.wrapperStep1.addEventListener('click', () => {
+          this.wrapperStep1.style.display = 'none';
+          this.title.classList.remove('visible');
 
-            this.crossFadeTo('assets/bg3.webp', () => {
-              this.audio.playSFX('shout1');
-              this.btn2.style.display = 'block';
-              setTimeout(() => this.btn2.classList.add('visible'), 20);
-            });
-          }, 200);
+          this.audio.playMusicWithFade();
+          this.triggerFlash();
+          this.carController.triggerBumpImpact('light');
+
+          this.crossFadeTo('assets/bg3.webp', () => {
+            this.audio.playSFX('shout1');
+            this.btn2.style.display = 'block';
+            setTimeout(() => this.btn2.classList.add('visible'), 20);
+          });
         });
 
+        // КРОК 2
         this.btn2.addEventListener('click', () => {
-          this.btn2.classList.add('btn-anticipate');
+          this.btn2.style.display = 'none';
 
-          setTimeout(() => {
-            this.btn2.style.display = 'none';
-            this.triggerFlash();
-            this.camera.shake('medium');
-            this.camera.applyZoomBlur(14);
+          this.triggerFlash();
+          this.carController.triggerBumpImpact('medium');
 
-            this.crossFadeTo('assets/bg5.webp', () => {
-              this.audio.playSFX('shout2');
-              this.btn3.style.display = 'block';
-              setTimeout(() => this.btn3.classList.add('visible'), 20);
-            });
-          }, 200);
+          this.crossFadeTo('assets/bg5.webp', () => {
+            this.audio.playSFX('shout2');
+            this.btn3.style.display = 'block';
+            setTimeout(() => this.btn3.classList.add('visible'), 20);
+          });
         });
 
+        // КРОК 3
         this.btn3.addEventListener('click', () => {
-          this.btn3.classList.add('btn-anticipate');
+          this.btn3.style.display = 'none';
 
-          setTimeout(() => {
-            this.btn3.style.display = 'none';
-            this.triggerFlash(400);
-            this.camera.shake('heavy');
-            this.camera.applyZoomBlur(20);
+          this.triggerFlash();
+          this.carController.triggerBumpImpact('heavy');
 
-            this.crossFadeTo('assets/bg6.webp', () => {
-              this.audio.playSFX('shout3');
+          this.crossFadeTo('assets/bg6.webp', () => {
+            this.audio.playSFX('shout3');
 
-              this.title.src = 'assets/text_final.webp';
-              this.title.classList.add('final-position', 'visible');
+            this.title.src = 'assets/text_final.webp';
+            this.title.classList.add('final-position', 'visible');
 
-              this.ctaWrapper.classList.add('visible');
-            });
-          }, 200);
+            this.ctaWrapper.classList.add('visible');
+          });
         });
 
+        // CTA 
         this.ctaWrapper.addEventListener('click', () => {
-          const targetUrl = 'https://hanimax.com/serials/backseat-trip-with-my-stepmother/1';
-
-          if (MRAID.isAvailable() && typeof mraid.open === 'function') {
-            mraid.open(targetUrl);
-          } else {
-            window.location.href = targetUrl;
-          }
+          MRAID.openStore('https://hanimax.com/serials/backseat-trip-with-my-stepmother/1');
         });
       }
     }
